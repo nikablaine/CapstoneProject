@@ -21,7 +21,14 @@
 
     </android.support.design.widget.AppBarLayout>
 
-    <include layout="@layout/content_main" />
+    <!-- <include layout="@layout/content_main" /> -->
+
+    <fragment android:name="org.kraflapps.motiondroid.MainActivityFragment"
+        android:id="@+id/main_fragment"
+        android:layout_weight="1"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:layout="@layout/fragment_main" />
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/fab"
