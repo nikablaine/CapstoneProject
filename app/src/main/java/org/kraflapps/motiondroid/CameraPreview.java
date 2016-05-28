@@ -2,12 +2,16 @@ package org.kraflapps.motiondroid;
 
 
 import android.content.Context;
+import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
+import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.params.StreamConfigurationMap;
 import android.support.annotation.NonNull;
 import android.util.Log;
+import android.util.Size;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -17,13 +21,18 @@ import java.util.Arrays;
 public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
     private static final String LOG_TAG = CameraPreview.class.getSimpleName();
 
+    private CameraCharacteristics mCameraCharacteristics;
     private SurfaceHolder mHolder;
     private CameraDevice mCameraDevice;
     private CameraCaptureSession mCaptureSession;
 
-    public CameraPreview(Context context, CameraDevice camera, SurfaceHolder holder) {
+    public CameraPreview(Context context,
+                         CameraDevice camera,
+                         CameraCharacteristics cameraCharacteristics,
+                         SurfaceHolder holder) {
         super(context);
         mCameraDevice = camera;
+        mCameraCharacteristics = cameraCharacteristics;
 
         // Install a SurfaceHolder.Callback so we get notified when the
         // underlying surface is created and destroyed.
@@ -41,6 +50,11 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             final CaptureRequest.Builder mPreviewRequestBuilder
                     = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mPreviewRequestBuilder.addTarget(surface);
+
+            // try to get information about camera supported preview sizes
+            StreamConfigurationMap streamConfigurationMap = mCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+            Size[] sizes = streamConfigurationMap.getOutputSizes(SurfaceTexture.class);
+            Log.d(LOG_TAG, "Supported sizes: " + sizes);
 
             // Here, we create a CameraCaptureSession for camera preview.
             mCameraDevice.createCaptureSession(Arrays.asList(surface),
