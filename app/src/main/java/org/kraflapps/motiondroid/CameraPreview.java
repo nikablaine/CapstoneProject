@@ -16,7 +16,11 @@ import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback {
     private static final String LOG_TAG = CameraPreview.class.getSimpleName();
@@ -37,6 +41,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         // Install a SurfaceHolder.Callback so we get notified when the
         // underlying surface is created and destroyed.
         mHolder = holder;
+        mHolder.setFixedSize(100, 100);
         mHolder.addCallback(this);
         // deprecated setting, but required on Android versions prior to 3.0
         mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
@@ -54,7 +59,12 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             // try to get information about camera supported preview sizes
             StreamConfigurationMap streamConfigurationMap = mCameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
             Size[] sizes = streamConfigurationMap.getOutputSizes(SurfaceTexture.class);
-            Log.d(LOG_TAG, "Supported sizes: " + sizes);
+            Size size = getPreferredPreviewSize(sizes, holder.getSurfaceFrame().width(), holder.getSurfaceFrame().height());
+            Log.d(LOG_TAG, "size = " + size);
+
+
+
+            Log.d(LOG_TAG, "Supported sizes: " + sizes.toString());
 
             // Here, we create a CameraCaptureSession for camera preview.
             mCameraDevice.createCaptureSession(Arrays.asList(surface),
@@ -66,6 +76,8 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
                             if (null == mCameraDevice) {
                                 return;
                             }
+
+                            mHolder.setFixedSize(300, 400);
 
                             // When the session is ready, we start displaying the preview.
                             mCaptureSession = cameraCaptureSession;
@@ -183,4 +195,31 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             Log.e(LOG_TAG, "Error accessing the camera", e);
         }
     }
+
+    private Size getPreferredPreviewSize(Size[] mapSizes, int width, int height) {
+        List<Size> collectorSizes = new ArrayList<>();
+        for(Size option : mapSizes) {
+            if(width > height) {
+                if(option.getWidth() > width &&
+                        option.getHeight() > height) {
+                    collectorSizes.add(option);
+                }
+            } else {
+                if(option.getWidth() > height &&
+                        option.getHeight() > width) {
+                    collectorSizes.add(option);
+                }
+            }
+        }
+        if(collectorSizes.size() > 0) {
+            return Collections.min(collectorSizes, new Comparator<Size>() {
+                @Override
+                public int compare(Size lhs, Size rhs) {
+                    return Long.signum(lhs.getWidth() * lhs.getHeight() - rhs.getWidth() * rhs.getHeight());
+                }
+            });
+        }
+        return mapSizes[0];
+    }
+
 }

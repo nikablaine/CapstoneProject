@@ -27,8 +27,8 @@
         tools:layout_constraintRight_creator="0" />
 
     <fragment
-        android:layout_width="337dp"
-        android:layout_height="191dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:name="org.kraflapps.motiondroid.CameraFragment"
         tools:layout_editor_absoluteX="23dp"
         tools:layout_editor_absoluteY="80dp"
