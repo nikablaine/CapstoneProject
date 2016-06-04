@@ -3,6 +3,7 @@ package org.kraflapps.motiondroid;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
@@ -19,14 +20,12 @@ import android.support.v4.app.Fragment;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.util.Size;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -52,7 +51,6 @@ public class CameraFragment extends Fragment {
     private CameraDevice mCameraDevice;
     private CameraCaptureSession mCaptureSession;
     private TextureView mTextureView;
-
 
 
     private CameraDevice.StateCallback mCameraCallback = new CameraDevice.StateCallback() {
@@ -93,7 +91,11 @@ public class CameraFragment extends Fragment {
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int width, int height) {
             try {
-                setPreviewSize(mCameraManager.getCameraCharacteristics(mCurrentCameraId), width, height);
+                setPreviewSize(
+                        mCameraManager.getCameraCharacteristics(mCurrentCameraId),
+                        width,
+                        height,
+                        getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT);
             } catch (CameraAccessException e) {
                 e.printStackTrace();
             }
@@ -229,39 +231,62 @@ public class CameraFragment extends Fragment {
     public void onResume() {
         super.onResume();
 
-       if (!mTextureView.isAvailable()) {
+        if (!mTextureView.isAvailable()) {
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
-       }
-    }
-
-    private void setPreviewSize(CameraCharacteristics cameraCharacteristics, int width, int height) {
-        Log.d(LOG_TAG, "cameraCharacteristics = [" + cameraCharacteristics + "], width = [" + width + "], height = [" + height + "]");
-        StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-        Size previewSize = getPreferredPreviewSize(map.getOutputSizes(SurfaceTexture.class), width, height);
-        Log.d(LOG_TAG, "previewSize: width = [" + previewSize.getWidth() + "], height = [" + previewSize.getHeight()+ "]");
-        if (mTextureView.isAvailable()) {
-            Log.d(LOG_TAG, "Setting height and width for the textureView");
-            mTextureView.setLayoutParams(new RelativeLayout.LayoutParams(
-                    previewSize.getWidth()/2, previewSize.getHeight()/2));
         }
     }
 
-    private Size getPreferredPreviewSize(Size[] mapSizes, int width, int height) {
+    private void setPreviewSize(CameraCharacteristics cameraCharacteristics, int width, int height, boolean isPortrait) {
+        Log.d(LOG_TAG, "cameraCharacteristics = [" + cameraCharacteristics + "], width = [" + width + "], height = [" + height + "]");
+        StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+        Size previewSize = getPreferredPreviewSize(map.getOutputSizes(SurfaceTexture.class), width, height, isPortrait);
+        Log.d(LOG_TAG, "previewSize: width = [" + previewSize.getWidth() + "], height = [" + previewSize.getHeight() + "]");
+        if (mTextureView.isAvailable()) {
+            Log.d(LOG_TAG, "Setting height and width for the textureView");
+            if (getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT) {
+                mTextureView.setLayoutParams(new RelativeLayout.LayoutParams(
+                        previewSize.getHeight(), previewSize.getWidth()));
+            } else {
+                mTextureView.setLayoutParams(new RelativeLayout.LayoutParams(
+                        previewSize.getWidth(), previewSize.getHeight()));
+            }
+        }
+    }
+
+    private Size getPreferredPreviewSize(Size[] mapSizes, int width, int height, boolean isPortrait) {
+        Log.d(LOG_TAG, "MapSizes: " + Arrays.toString(mapSizes));
         List<Size> collectorSizes = new ArrayList<>();
-        for(Size option : mapSizes) {
-            if(width > height) {
-                if(option.getWidth() > width &&
+        for (Size option : mapSizes) {
+            if (option.getWidth() <= (isPortrait ? height : width) &&
+                    option.getHeight() <= (isPortrait ? width : height)) {
+                collectorSizes.add(option);
+            }
+        }
+
+        if (collectorSizes.size() > 0) {
+            return Collections.max(collectorSizes, new Comparator<Size>() {
+                @Override
+                public int compare(Size lhs, Size rhs) {
+                    return Long.signum(lhs.getWidth() * lhs.getHeight() - rhs.getWidth() * rhs.getHeight());
+                }
+            });
+        }
+
+        return mapSizes[0];
+
+            /*if (width > height) {
+                if (option.getWidth() > width &&
                         option.getHeight() > height) {
                     collectorSizes.add(option);
                 }
             } else {
-                if(option.getWidth() > height &&
+                if (option.getWidth() > height &&
                         option.getHeight() > width) {
                     collectorSizes.add(option);
                 }
             }
         }
-        if(collectorSizes.size() > 0) {
+        if (collectorSizes.size() > 0) {
             return Collections.min(collectorSizes, new Comparator<Size>() {
                 @Override
                 public int compare(Size lhs, Size rhs) {
@@ -269,9 +294,8 @@ public class CameraFragment extends Fragment {
                 }
             });
         }
-        return mapSizes[0];
+        return mapSizes[0];*/
     }
-
 
 
     private void checkPermissions() {
@@ -426,5 +450,5 @@ public class CameraFragment extends Fragment {
                 });*/
 
 
-        }
     }
+}
