@@ -1,5 +1,7 @@
 package org.kraflapps.motiondroid;
 
+import android.app.ActivityManager;
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.media.Image;
@@ -112,5 +114,15 @@ public class Util {
         byte[] bitmapArray = new byte[length];
         buffer.get(bitmapArray);
         return BitmapFactory.decodeByteArray(bitmapArray, 0, length);
+    }
+
+    static boolean isServiceRunning(Context context, Class<?> serviceClass) {
+        ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
     }
 }

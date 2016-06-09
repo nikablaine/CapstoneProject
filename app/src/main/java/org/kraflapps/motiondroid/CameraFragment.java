@@ -115,13 +115,13 @@ public class CameraFragment extends Fragment {
         public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
             Log.d(LOG_TAG, "On surface texture destroyed");
             try {
-                if (mCameraDevice != null) {
-                    if (!mClosed) {
-                        mCaptureSession.abortCaptures();
-                    }
+                if (mCameraDevice != null && !((MainActivity) getActivity()).isServiceRunning(MotionService.class)) {
+                    mCaptureSession.abortCaptures();
                 }
             } catch (CameraAccessException e) {
                 Log.e(LOG_TAG, "On surface texture destroyed", e);
+            } catch (IllegalStateException e) {
+                Log.e(LOG_TAG, "Camera session already closed", e);
             }
             return false;
         }
@@ -239,11 +239,10 @@ public class CameraFragment extends Fragment {
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         }
 
-        if (mCameraDevice != null) {
+/*        if (mCameraDevice != null) {
             mCameraDevice.close();
-        }
+        }*/
     }
-
 
 
     @Override

@@ -41,6 +41,18 @@
         <activity
             android:name="net.rdrei.android.dirchooser.DirectoryChooserActivity" />
 
+        <receiver android:name=".MotionWidgetProvider">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/appwidget_info" />
+        </receiver>
+
+        <service android:name=".MotionWidgetUpdaterService" />
+
+
     </application>
 
 </manifest>

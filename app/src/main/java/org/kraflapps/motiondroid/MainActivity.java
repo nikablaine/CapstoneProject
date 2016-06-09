@@ -1,7 +1,5 @@
 package org.kraflapps.motiondroid;
 
-import android.app.ActivityManager;
-import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -90,14 +88,8 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
-    private boolean isServiceRunning(Class<?> serviceClass) {
-        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
-            if (serviceClass.getName().equals(service.service.getClassName())) {
-                return true;
-            }
-        }
-        return false;
+    public boolean isServiceRunning(Class<?> serviceClass) {
+        return Util.isServiceRunning(this, serviceClass);
     }
 
     private void setFab() {
