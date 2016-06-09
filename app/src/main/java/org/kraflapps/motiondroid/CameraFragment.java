@@ -2,6 +2,7 @@ package org.kraflapps.motiondroid;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.SurfaceTexture;
@@ -22,7 +23,6 @@ import android.util.Log;
 import android.util.Size;
 import android.view.LayoutInflater;
 import android.view.Surface;
-import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
@@ -44,35 +44,31 @@ public class CameraFragment extends Fragment {
     private static final String LOG_TAG = CameraFragment.class.getSimpleName();
 
     private static final int MY_PERMISSIONS_REQUEST_CAMERA = 1;
+    private static final int MY_PERMISSIONS_REQUEST_READ_STORAGE = 2;
+    private static final int MY_PERMISSIONS_REQUEST_WRITE_STORAGE = 3;
 
     private CameraManager mCameraManager;
-    private CameraPreview mPreview;
     private String mCurrentCameraId;
     private CameraDevice mCameraDevice;
     private CameraCaptureSession mCaptureSession;
     private TextureView mTextureView;
-
+    private boolean mClosed;
 
     private CameraDevice.StateCallback mCameraCallback = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(CameraDevice camera) {
+            mClosed = true;
             mCameraDevice = camera;
-            SurfaceView view = (SurfaceView) getView().findViewById(R.id.cameraView);
-            mTextureView = (TextureView) getView().findViewById(R.id.cameraView1);
+            mTextureView = (TextureView) getView().findViewById(R.id.cameraView);
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
 
-           /* try {
-                CameraCharacteristics cameraCharacteristics = mCameraManager.getCameraCharacteristics(camera.getId());
-                mPreview = new CameraPreview(getContext(),
-                        mCameraDevice,
-                        cameraCharacteristics,
-                        view.getHolder());
-            } catch (CameraAccessException e) {
-                Log.e(LOG_TAG, "Error accessing camera", e);
-            }
-            view.getHolder().addCallback(mPreview);*/
             Log.d(LOG_TAG, "Successfully opened camera " + camera.getId());
 
+            // save the opened camera id to the shared preferences in order to use it in the motion service
+            SharedPreferences prefs = getContext().getSharedPreferences(getString(R.string.prefs_name), Context.MODE_PRIVATE);
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putString(getString(R.string.camera_id_key), camera.getId());
+            editor.apply();
         }
 
         @Override
@@ -81,8 +77,14 @@ public class CameraFragment extends Fragment {
         }
 
         @Override
-        public void onError(CameraDevice camera, int error) {
+        public void onClosed(CameraDevice camera) {
+            super.onClosed(camera);
+            mClosed = true;
+        }
 
+        @Override
+        public void onError(CameraDevice camera, int error) {
+            Log.e(LOG_TAG, "Camera error: " + error);
         }
     };
 
@@ -91,16 +93,17 @@ public class CameraFragment extends Fragment {
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int width, int height) {
             try {
-                setPreviewSize(
-                        mCameraManager.getCameraCharacteristics(mCurrentCameraId),
-                        width,
-                        height,
-                        getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT);
+                if (mCurrentCameraId != null) {
+                    setPreviewSize(
+                            mCameraManager.getCameraCharacteristics(mCurrentCameraId),
+                            width,
+                            height,
+                            getResources().getConfiguration().orientation == Configuration.ORIENTATION_PORTRAIT);
+                    startPreview(surfaceTexture);
+                }
             } catch (CameraAccessException e) {
                 e.printStackTrace();
             }
-
-            startPreview(surfaceTexture);
         }
 
         @Override
@@ -110,6 +113,16 @@ public class CameraFragment extends Fragment {
 
         @Override
         public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+            Log.d(LOG_TAG, "On surface texture destroyed");
+            try {
+                if (mCameraDevice != null) {
+                    if (!mClosed) {
+                        mCaptureSession.abortCaptures();
+                    }
+                }
+            } catch (CameraAccessException e) {
+                Log.e(LOG_TAG, "On surface texture destroyed", e);
+            }
             return false;
         }
 
@@ -185,20 +198,6 @@ public class CameraFragment extends Fragment {
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-
-        /*// Create our Preview view and set it as the content of our activity.
-        mPreview = new CameraPreview(this, mCameraManager);
-        FrameLayout preview = (FrameLayout) findViewById(R.id.camera_preview);
-        preview.addView(mPreview);*/
-    }
-
-    @Override
-    public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-        // obtain an instance of camera manager
-
-
     }
 
     @Override
@@ -215,16 +214,21 @@ public class CameraFragment extends Fragment {
                 Toast.makeText(getContext(), "Problems accessing the camera", Toast.LENGTH_SHORT).show();
             } else {
                 mCurrentCameraId = cameraIdList[0];
+                Log.d(LOG_TAG, "cameraIdList: " + cameraIdList[0]);
             }
-            Log.d(LOG_TAG, "cameraIdList: " + cameraIdList[0]);
         } catch (CameraAccessException e) {
             Log.e(LOG_TAG, "Problems accesing the camera", e);
         }
 
-        mTextureView = (TextureView) getActivity().findViewById(R.id.cameraView1);
+        mTextureView = (TextureView) getActivity().findViewById(R.id.cameraView);
 
         initializePreview();
 
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
     }
 
     @Override
@@ -234,6 +238,17 @@ public class CameraFragment extends Fragment {
         if (!mTextureView.isAvailable()) {
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         }
+
+        if (mCameraDevice != null) {
+            mCameraDevice.close();
+        }
+    }
+
+
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
     }
 
     private void setPreviewSize(CameraCharacteristics cameraCharacteristics, int width, int height, boolean isPortrait) {
@@ -311,9 +326,27 @@ public class CameraFragment extends Fragment {
                             Manifest.permission.CAPTURE_VIDEO_OUTPUT},
                     MY_PERMISSIONS_REQUEST_CAMERA);
 
-            // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
-            // app-defined int constant. The callback method gets the
-            // result of the request.
+        }
+
+        if (ContextCompat.checkSelfPermission(getActivity(),
+                Manifest.permission.READ_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            Log.d(LOG_TAG, "Permissions not granted");
+
+            ActivityCompat.requestPermissions(getActivity(),
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                    MY_PERMISSIONS_REQUEST_READ_STORAGE);
+
+        }
+
+        if (ContextCompat.checkSelfPermission(getActivity(),
+                Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            Log.d(LOG_TAG, "Permissions not granted");
+
+            ActivityCompat.requestPermissions(getActivity(),
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                    MY_PERMISSIONS_REQUEST_WRITE_STORAGE);
         } else {
             initializePreview();
         }
@@ -321,134 +354,37 @@ public class CameraFragment extends Fragment {
 
     @Override
     public void onRequestPermissionsResult(int requestCode,
-                                           String permissions[], int[] grantResults) {
+                                           String permissions[],
+                                           int[] grantResults) {
         switch (requestCode) {
             case MY_PERMISSIONS_REQUEST_CAMERA: {
-                // If request is cancelled, the result arrays are empty.
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-                    // permission was granted, yay! Do the
-                    // contacts-related task you need to do.
-                    initializePreview();
-
-                } else {
-
-                    // permission denied, boo! Disable the
-                    // functionality that depends on this permission.
-                }
-                return;
+                initializePreview();
             }
-
-            // other 'case' lines to check for other
-            // permissions this app might request
         }
     }
 
     private void initializePreview() {
-        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            SurfaceView cameraView = (SurfaceView) getActivity().findViewById(R.id.cameraView);
+        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.CAMERA) !=
+                PackageManager.PERMISSION_GRANTED) {
+            TextureView cameraView = (TextureView) getActivity().findViewById(R.id.cameraView);
             cameraView.setVisibility(View.INVISIBLE);
-            TextureView cameraView1 = (TextureView) getActivity().findViewById(R.id.cameraView1);
-            cameraView1.setVisibility(View.INVISIBLE);
             TextView cameraOffTextView = (TextView) getActivity().findViewById(R.id.textView);
             cameraOffTextView.setVisibility(View.VISIBLE);
-            cameraOffTextView.setText("Camera permissions not granted");
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            // here to request the missing permissions, and then overriding
-            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-            //                                          int[] grantResults)
-            // to handle the case where the user grants the permission. See the documentation
-            // for ActivityCompat#requestPermissions for more details.
-            return;
+            cameraOffTextView.setText(R.string.camera_permissions_not_granted);
         } else {
-            if (mCameraManager != null) {
+            if (mCameraManager != null && mCurrentCameraId != null) {
                 try {
                     mCameraManager.openCamera(mCurrentCameraId, mCameraCallback, null);
-
                 } catch (CameraAccessException e) {
                     Log.e(LOG_TAG, "Could not access camera", e);
                 }
             }
         }
+    }
 
-
-
-
-
-
-        /*RxCameraConfig config = RxCameraConfigChooser.obtain().
-                useBackCamera().
-                setAutoFocus(true).
-                setPreferPreviewFrameRate(15, 30).
-                setPreferPreviewSize(new Point(640, 480)).
-                setHandleSurfaceEvent(true).
-                get();
-
-        Observable<RxCamera> rxCameraObservable = RxCamera
-                .open(getContext(), config);
-
-        rxCameraObservable.subscribe(
-                new Action1<RxCamera>() {
-                    @Override
-                    public void call(RxCamera rxCamera) {
-                        Log.d(LOG_TAG, "RxCamera called " + rxCamera.getNativeCamera());
-                    }
-                },
-                new Action1<Throwable>() {
-                    @Override
-                    public void call(Throwable throwable) {
-                        Log.e(LOG_TAG, "Error in observable", throwable);
-                    }
-                });
-
-
-        rxCameraObservable
-                .flatMap(new Func1<RxCamera, Observable<RxCamera>>() {
-                    @Override
-                    public Observable<RxCamera> call(RxCamera rxCamera) {
-                        return rxCamera.bindSurface(surfaceView);
-                    }
-                });
-
-        rxCameraObservable.subscribe(
-                new Action1<RxCamera>() {
-                    @Override
-                    public void call(RxCamera rxCamera) {
-                        Log.d(LOG_TAG, "RxCamera called " + rxCamera.getNativeCamera());
-                    }
-                },
-                new Action1<Throwable>() {
-                    @Override
-                    public void call(Throwable throwable) {
-                        Log.e(LOG_TAG, "Error in observable", throwable);
-                    }
-                });
-
-
-        rxCameraObservable
-                .flatMap(new Func1<RxCamera, Observable<RxCamera>>() {
-                    @Override
-                    public Observable<RxCamera> call(RxCamera rxCamera) {
-                        return rxCamera.startPreview();
-                    }
-                });
-
-        rxCameraObservable.subscribe(
-                new Action1<RxCamera>() {
-                    @Override
-                    public void call(RxCamera rxCamera) {
-                        Log.d(LOG_TAG, "RxCamera called " + rxCamera.getNativeCamera());
-                    }
-                },
-                new Action1<Throwable>() {
-                    @Override
-                    public void call(Throwable throwable) {
-                        Log.e(LOG_TAG, "Error in observable", throwable);
-                    }
-                });*/
-
-
+    public void closeCamera() {
+        if (mCameraDevice != null) {
+            mCameraDevice.close();
+        }
     }
 }

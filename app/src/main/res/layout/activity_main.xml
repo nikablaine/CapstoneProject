@@ -44,7 +44,6 @@
         app:layout_constraintHorizontal_bias="1.0" />
 
     <android.support.design.widget.FloatingActionButton
-        android:src="@drawable/abc_textfield_search_material"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:clickable="true"
@@ -58,6 +57,5 @@
         app:layout_constraintBottom_toBottomOf="@+id/constraintLayout3"
         android:layout_marginBottom="16dp"
         tools:layout_constraintBottom_creator="0" />
-
 
 </android.support.constraint.ConstraintLayout>

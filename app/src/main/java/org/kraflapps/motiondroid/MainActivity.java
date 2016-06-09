@@ -1,15 +1,55 @@
 package org.kraflapps.motiondroid;
 
+import android.app.ActivityManager;
+import android.content.Context;
+import android.content.Intent;
+import android.content.res.ColorStateList;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
-import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
 
 public class MainActivity extends AppCompatActivity {
+
+    private boolean mRunning;
+
+    private View.OnClickListener onClickStartListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            Snackbar.make(view, "Starting the motion service ..", Snackbar.LENGTH_SHORT)
+                    .setAction("Action", null).show();
+
+            CameraFragment fragment = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
+            fragment.closeCamera();
+
+            Intent serviceIntent = new Intent(getApplicationContext(), MotionService.class);
+            /*AlarmManager alarmManager = (AlarmManager) getApplicationContext().getSystemService(Context.ALARM_SERVICE);
+            PendingIntent alarmIntent = PendingIntent.getBroadcast(getApplicationContext(), 0, serviceIntent, 0);
+
+            alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(),
+                    10000, alarmIntent);*/
+
+            startService(serviceIntent);
+            setFab();
+        }
+    };
+
+    private View.OnClickListener onClickEndListener = new View.OnClickListener() {
+        @Override
+        public void onClick(View view) {
+            Snackbar.make(view, "Stopping the motion service ..", Snackbar.LENGTH_SHORT)
+                    .setAction("Action", null).show();
+
+            Intent serviceIntent = new Intent(getApplicationContext(), MotionService.class);
+            stopService(serviceIntent);
+            setFab();
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -17,15 +57,13 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+        setFab();
+    }
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
+    @Override
+    protected void onPostResume() {
+        super.onPostResume();
+        setFab();
     }
 
     @Override
@@ -44,9 +82,30 @@ public class MainActivity extends AppCompatActivity {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_settings) {
+            Intent intent = new Intent(this, SettingsActivity.class);
+            startActivity(intent);
             return true;
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    private boolean isServiceRunning(Class<?> serviceClass) {
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void setFab() {
+        mRunning = isServiceRunning(MotionService.class);
+        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
+        if (fab != null) {
+            fab.setBackgroundTintList(ColorStateList.valueOf(mRunning ? Color.RED : Color.GREEN));
+            fab.setOnClickListener(mRunning ? onClickEndListener : onClickStartListener);
+        }
     }
 }

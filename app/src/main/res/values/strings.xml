@@ -1,4 +1,15 @@
 <resources>
     <string name="app_name">MotionDroid</string>
     <string name="action_settings">Settings</string>
+    <string name="prefs_name">org.kraflapps.motiondroid.prefs</string>
+    <string name="camera_id_key">cameraId</string>
+    <string name="camera_permissions_not_granted">Camera permissions not granted</string>
+    <string name="pref_folder">Save destination</string>
+    <string name="pref_capacity">Max capacity</string>
+    <string name="pref_overwrite">Overwrite policy</string>
+    <string name="title_activity_settings">Settings</string>
+    <string name="default_dir_name">motion</string>
+    <string name="pref_folder_key">pref_folder_key</string>
+    <string name="pref_capacity_key">pref_capacity_key</string>
+    <string name="pref_overwrite_key">pref_overwrite_key</string>
 </resources>

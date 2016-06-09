@@ -22,20 +22,8 @@
         tools:layout_editor_absoluteX="0dp"
         tools:layout_editor_absoluteY="0dp">
 
-        <SurfaceView
-            android:id="@+id/cameraView"
-            android:layout_width="fill_parent"
-            android:layout_height="fill_parent"
-            tools:layout_constraintBottom_creator="0"
-            tools:layout_constraintLeft_creator="0"
-            tools:layout_constraintRight_creator="0"
-            tools:layout_constraintTop_creator="0"
-            tools:layout_editor_absoluteX="0dp"
-            tools:layout_editor_absoluteY="0dp"
-            android:visibility="invisible"/>
-
         <TextureView
-            android:id="@+id/cameraView1"
+            android:id="@+id/cameraView"
             android:layout_width="fill_parent"
             android:layout_height="fill_parent"
             tools:layout_constraintBottom_creator="0"
