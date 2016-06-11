@@ -4,6 +4,9 @@ import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.support.annotation.IdRes;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
@@ -33,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
                     10000, alarmIntent);*/
 
             startService(serviceIntent);
-            setFab();
+            setViews();
         }
     };
 
@@ -45,7 +48,7 @@ public class MainActivity extends AppCompatActivity {
 
             Intent serviceIntent = new Intent(getApplicationContext(), MotionService.class);
             stopService(serviceIntent);
-            setFab();
+            setViews();
         }
     };
 
@@ -53,15 +56,26 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        if (isServiceRunning(MotionService.class)) {
+            addFragment(R.id.fragment,
+                    new PreviewFragment(),
+                    PreviewFragment.FRAGMENT_TAG);
+        } else {
+            addFragment(R.id.fragment,
+                    new CameraFragment(),
+                    CameraFragment.FRAGMENT_TAG);
+        }
+
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        setFab();
+        setViews();
     }
 
     @Override
     protected void onPostResume() {
         super.onPostResume();
-        setFab();
+        setViews();
     }
 
     @Override
@@ -92,6 +106,11 @@ public class MainActivity extends AppCompatActivity {
         return Util.isServiceRunning(this, serviceClass);
     }
 
+    private void setViews() {
+        setFab();
+        setFragments();
+    }
+
     private void setFab() {
         mRunning = isServiceRunning(MotionService.class);
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
@@ -99,5 +118,34 @@ public class MainActivity extends AppCompatActivity {
             fab.setBackgroundTintList(ColorStateList.valueOf(mRunning ? Color.RED : Color.GREEN));
             fab.setOnClickListener(mRunning ? onClickEndListener : onClickStartListener);
         }
+    }
+
+    private void setFragments() {
+        replaceFragment(R.id.fragment,
+                mRunning ? new PreviewFragment() : new CameraFragment(),
+                mRunning ? PreviewFragment.FRAGMENT_TAG : CameraFragment.FRAGMENT_TAG,
+                null
+        );
+    }
+
+    protected void addFragment(@IdRes int containerViewId,
+                               @NonNull android.support.v4.app.Fragment fragment,
+                               @NonNull String fragmentTag) {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .add(containerViewId, fragment, fragmentTag)
+                .disallowAddToBackStack()
+                .commit();
+    }
+
+    protected void replaceFragment(@IdRes int containerViewId,
+                                   @NonNull android.support.v4.app.Fragment fragment,
+                                   @NonNull String fragmentTag,
+                                   @Nullable String backStackStateName) {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(containerViewId, fragment, fragmentTag)
+                .addToBackStack(backStackStateName)
+                .commit();
     }
 }

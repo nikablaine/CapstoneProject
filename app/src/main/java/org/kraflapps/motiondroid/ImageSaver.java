@@ -98,7 +98,7 @@ public class ImageSaver implements Runnable {
                 }
             }
         } else {
-            mBitmap.compress(Bitmap.CompressFormat.PNG, 100, output);
+            mBitmap.compress(Bitmap.CompressFormat.JPEG, 60, output);
         }
     }
 

@@ -22,7 +22,7 @@ public class WidgetUtil {
         );
         views.setTextViewText(R.id.widgetText,
                 isServiceRunning(context, MotionService.class) ?
-                        context.getString(R.string.widget_rinning) :
+                        context.getString(R.string.widget_running) :
                         context.getString(R.string.widget_start));
 
         ComponentName thisWidget = new ComponentName(context, MotionWidgetProvider.class);

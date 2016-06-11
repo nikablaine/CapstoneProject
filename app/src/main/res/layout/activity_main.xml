@@ -26,12 +26,10 @@
         app:layout_constraintRight_toRightOf="@+id/constraintLayout3"
         tools:layout_constraintRight_creator="0" />
 
-    <fragment
-        android:name="org.kraflapps.motiondroid.CameraFragment"
+    <RelativeLayout
+        android:id="@+id/fragment"
         tools:layout_editor_absoluteX="0dp"
         tools:layout_editor_absoluteY="80dp"
-        android:id="@+id/fragment"
-        tools:layout="@layout/fragment_main"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintLeft_toLeftOf="@+id/constraintLayout3"

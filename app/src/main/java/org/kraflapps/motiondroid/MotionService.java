@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
@@ -38,6 +39,8 @@ public class MotionService extends IntentService {
 
     private static final String NAME = MotionService.class.getSimpleName();
     private static final String LOG_TAG = MotionService.class.getName();
+    public static final int LONG_METRIC = 640;
+    public static final int SMALL_METRIC = 480;
     private CameraManager mCameraManager;
     private CameraDevice mCameraDevice;
     private ImageReader mImageReader;
@@ -48,6 +51,7 @@ public class MotionService extends IntentService {
     private Bitmap mCurrentImage;
     private CameraCaptureSession mSession;
     private SurfaceTexture mDummyPreview;
+    private int mOrientation;
 
     /**
      * Creates a service with a default name.
@@ -95,7 +99,15 @@ public class MotionService extends IntentService {
 
         mDummyPreview = new SurfaceTexture(1);
         mDummySurface = new Surface(mDummyPreview);
-        mImageReader = ImageReader.newInstance(640, 480, ImageFormat.JPEG, 2);
+        mOrientation = getResources().getConfiguration().orientation;
+        boolean isPortrait = mOrientation == Configuration.ORIENTATION_PORTRAIT;
+
+        mImageReader = ImageReader.newInstance(
+                isPortrait ? SMALL_METRIC : LONG_METRIC,
+                isPortrait ? LONG_METRIC : SMALL_METRIC,
+                ImageFormat.JPEG,
+                2
+        );
         mImageReader.setOnImageAvailableListener(mImageListener, null);
     }
 
@@ -128,6 +140,10 @@ public class MotionService extends IntentService {
                     captureRequestBuilder.addTarget(mImageReader.getSurface());
                     captureRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE,
                             CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+                    captureRequestBuilder.set(CaptureRequest.JPEG_ORIENTATION,
+                            Util.getJpegOrientation(
+                                    mCameraManager.getCameraCharacteristics(mCameraDevice.getId()),
+                                    mOrientation));
                     final CaptureRequest captureRequest = captureRequestBuilder.build();
 
                     Log.d(LOG_TAG, "Capture request created");
@@ -214,7 +230,7 @@ public class MotionService extends IntentService {
                         Log.d(LOG_TAG, "Diff is significant, saving..");
                         SharedPreferences defaultSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
                         String dirPath = defaultSharedPreferences.getString(getResources().getString(pref_folder_key), Environment.getExternalStorageDirectory().getPath());
-                        String name = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date(System.currentTimeMillis())) + ".png";
+                        String name = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date(System.currentTimeMillis())) + ".jpg";
                         File file = new File(dirPath, name);
 
                         Integer capacity = Integer.valueOf(defaultSharedPreferences.getString(getResources().getString(R.string.pref_capacity_key), "100"));
@@ -244,6 +260,5 @@ public class MotionService extends IntentService {
         SharedPreferences preferences = getApplicationContext().getSharedPreferences(getString(R.string.prefs_name), Context.MODE_PRIVATE);
         return preferences.getString(getString(R.string.camera_id_key), null);
     }
-
 
 }
