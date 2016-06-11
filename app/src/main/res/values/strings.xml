@@ -14,6 +14,7 @@
     <string name="pref_overwrite_key">pref_overwrite_key</string>
     <string name="motion_service_is_running">showing whether motion service is running</string>
     <string name="widget_text">MotionDroid</string>
-    <string name="widget_rinning">Running</string>
+    <string name="widget_running">Running</string>
     <string name="widget_start">Start</string>
+    <string name="last_image_preview">Last image preview</string>
 </resources>

@@ -143,6 +143,13 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         private String mPrefOverwritePolicyKey;
 
         @Override
+        public void onCreate(Bundle savedInstanceState) {
+            super.onCreate(savedInstanceState);
+            addPreferencesFromResource(R.xml.preferences);
+            setHasOptionsMenu(true);
+        }
+
+        @Override
         public void onActivityResult(int requestCode, int resultCode, Intent data) {
             super.onActivityResult(requestCode, resultCode, data);
 
@@ -162,15 +169,12 @@ public class SettingsActivity extends AppCompatPreferenceActivity {
         }
 
         @Override
-        public void onCreate(Bundle savedInstanceState) {
+        public void onActivityCreated(Bundle savedInstanceState) {
+            super.onActivityCreated(savedInstanceState);
 
             mPrefDirKey = getResources().getString(R.string.pref_folder_key);
             mPrefCapacityKey = getResources().getString(R.string.pref_capacity_key);
             mPrefOverwritePolicyKey = getResources().getString(R.string.pref_overwrite_key);
-
-            super.onCreate(savedInstanceState);
-            addPreferencesFromResource(R.xml.preferences);
-            setHasOptionsMenu(true);
 
             final Preference prefFolder = findPreference(mPrefDirKey);
             prefFolder.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
