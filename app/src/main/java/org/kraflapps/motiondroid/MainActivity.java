@@ -1,9 +1,12 @@
 package org.kraflapps.motiondroid;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.support.annotation.IdRes;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -70,6 +73,20 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         setViews();
+    }
+
+    @Override
+    protected void onPostCreate(@Nullable Bundle savedInstanceState) {
+        super.onPostCreate(savedInstanceState);
+
+        // add the default value for the storage folder
+        SharedPreferences defaultSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        String dirName = defaultSharedPreferences.getString(getString(R.string.pref_folder_key), null);
+        if (null == dirName) {
+            SharedPreferences.Editor editor = defaultSharedPreferences.edit();
+            editor.putString(getString(R.string.pref_folder_key), Environment.getExternalStorageDirectory() + getString(R.string.default_folder_name));
+            editor.apply();
+        }
     }
 
     @Override
