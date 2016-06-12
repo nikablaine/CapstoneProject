@@ -2,6 +2,8 @@ package org.kraflapps.motiondroid;
 
 import android.Manifest;
 import android.app.IntentService;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -52,6 +54,7 @@ public class MotionService extends IntentService {
     private CameraCaptureSession mSession;
     private SurfaceTexture mDummyPreview;
     private int mOrientation;
+    private ContentResolver mContentResolver;
 
     /**
      * Creates a service with a default name.
@@ -87,6 +90,8 @@ public class MotionService extends IntentService {
                     Log.e(LOG_TAG, "Camera access problem", e);
                 }
         }
+
+        mContentResolver = getContentResolver();
 
         return START_STICKY;
 
@@ -228,9 +233,18 @@ public class MotionService extends IntentService {
 
                     if (differenceLite >= 0.02) {
                         Log.d(LOG_TAG, "Diff is significant, saving..");
+
+                        long timestamp = System.currentTimeMillis();
+
+                        // insert about the timestamp and difference to the database
+                        ContentValues contentValues = new ContentValues();
+                        contentValues.put(PhotoContract.PhotoEntry.PHOTO_ID, timestamp);
+                        contentValues.put(PhotoContract.PhotoEntry.DIFF, differenceLite);
+                        mContentResolver.insert(PhotoContract.PhotoEntry.CONTENT_URI, contentValues);
+
                         SharedPreferences defaultSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
                         String dirPath = defaultSharedPreferences.getString(getResources().getString(pref_folder_key), Environment.getExternalStorageDirectory().getPath());
-                        String name = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date(System.currentTimeMillis())) + ".jpg";
+                        String name = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date(timestamp)) + ".jpg";
                         File file = new File(dirPath, name);
 
                         Integer capacity = Integer.valueOf(defaultSharedPreferences.getString(getResources().getString(R.string.pref_capacity_key), "100"));

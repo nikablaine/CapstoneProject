@@ -53,6 +53,10 @@
 
         <service android:name=".MotionWidgetUpdaterService" />
 
+        <provider
+            android:name=".PhotoFileProvider"
+            android:authorities="org.kraflapps.motiondroid.PhotoFileProvider"
+            android:exported="false" />
 
     </application>
 
