@@ -20,6 +20,7 @@ import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.TotalCaptureResult;
 import android.media.Image;
 import android.media.ImageReader;
+import android.net.Uri;
 import android.os.Environment;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
@@ -237,10 +238,12 @@ public class MotionService extends IntentService {
                         long timestamp = System.currentTimeMillis();
 
                         // insert about the timestamp and difference to the database
+                        Log.d(LOG_TAG, "Saving info to the database");
                         ContentValues contentValues = new ContentValues();
                         contentValues.put(PhotoContract.PhotoEntry.PHOTO_ID, timestamp);
                         contentValues.put(PhotoContract.PhotoEntry.DIFF, differenceLite);
-                        mContentResolver.insert(PhotoContract.PhotoEntry.CONTENT_URI, contentValues);
+                        Uri insert = mContentResolver.insert(PhotoContract.PhotoEntry.CONTENT_URI, contentValues);
+                        Log.d(LOG_TAG, "Inserted a new row: " + insert);
 
                         SharedPreferences defaultSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
                         String dirPath = defaultSharedPreferences.getString(getResources().getString(pref_folder_key), Environment.getExternalStorageDirectory().getPath());
