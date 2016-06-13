@@ -39,6 +39,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A placeholder fragment containing a simple view.
@@ -58,11 +60,12 @@ public class CameraFragment extends Fragment {
     private CameraCaptureSession mCaptureSession;
     private TextureView mTextureView;
     private boolean mClosed;
+    private Semaphore mCameraOpenCloseLock = new Semaphore(1);
 
     private CameraDevice.StateCallback mCameraCallback = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(CameraDevice camera) {
-            mClosed = true;
+            mCameraOpenCloseLock.release();
             mCameraDevice = camera;
             mTextureView = (TextureView) mRootView.findViewById(R.id.cameraView);
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
@@ -78,17 +81,17 @@ public class CameraFragment extends Fragment {
 
         @Override
         public void onDisconnected(CameraDevice camera) {
-
+            mCameraOpenCloseLock.release();
         }
 
         @Override
         public void onClosed(CameraDevice camera) {
             super.onClosed(camera);
-            mClosed = true;
         }
 
         @Override
         public void onError(CameraDevice camera, int error) {
+            mCameraOpenCloseLock.release();
             Log.e(LOG_TAG, "Camera error: " + error);
         }
     };
@@ -141,6 +144,7 @@ public class CameraFragment extends Fragment {
             try {
                 if (mCaptureSession != null && !Util.isMotionServiceRunning(getContext())) {
                     mCaptureSession.abortCaptures();
+                    mCaptureSession = null;
                 }
             } catch (CameraAccessException e) {
                 Log.e(LOG_TAG, "On surface texture destroyed", e);
@@ -152,8 +156,13 @@ public class CameraFragment extends Fragment {
 
         @Override
         public void onSurfaceTextureUpdated(SurfaceTexture surfaceTexture) {
+            Log.d(LOG_TAG, "CameraFragment.onSurfaceTextureUpdated");
             if (mCaptureSession == null) {
-                startPreview(surfaceTexture);
+                try {
+                    startPreview(surfaceTexture);
+                } catch (Exception e) {
+                    Log.e(LOG_TAG, "Exception on surface updated", e);
+                }
             }
         }
 
@@ -211,8 +220,8 @@ public class CameraFragment extends Fragment {
     @Override
     public void onPause() {
         Log.d(LOG_TAG, "CameraFragment.onPause");
+        closeCamera();
         super.onPause();
-
     }
 
     @Override
@@ -220,30 +229,11 @@ public class CameraFragment extends Fragment {
         Log.d(LOG_TAG, "CameraFragment.onResume");
         super.onResume();
 
-        if (mCameraDevice == null) {
+        if (mTextureView.isAvailable()) {
             openCamera();
-        }
-
-        if (!mTextureView.isAvailable()) {
+        } else {
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         }
-
-/*        if (mCameraDevice != null) {
-            mCameraDevice.close();
-        }*/
-
-
-    }
-
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        /*try {
-            mCameraDevice.close();
-        } catch (Exception e) {
-            Log.e(LOG_TAG, "Exception with camera", e);
-        }*/
     }
 
     private void setPreviewSize(CameraCharacteristics cameraCharacteristics, int width, int height, boolean isPortrait) {
@@ -369,17 +359,36 @@ public class CameraFragment extends Fragment {
         } else {
             if (mCameraManager != null && mCurrentCameraId != null) {
                 try {
-                    mCameraManager.openCamera(mCurrentCameraId, callback, null);
+                    if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
+                        throw new RuntimeException("Time out waiting to lock camera opening.");
+                    }
+                     mCameraManager.openCamera(mCurrentCameraId, callback, null);
                 } catch (CameraAccessException e) {
                     Log.e(LOG_TAG, "Could not access camera", e);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException("Interrupted while trying to lock camera opening.", e);
                 }
             }
         }
     }
 
     public void closeCamera() {
-        if (mCameraDevice != null) {
-            mCameraDevice.close();
+        try {
+            Log.d(LOG_TAG, "Closing camera. Acquiring the lock..");
+            mCameraOpenCloseLock.acquire();
+            if (null != mCaptureSession) {
+                mCaptureSession.close();
+                mCaptureSession = null;
+            }
+            if (null != mCameraDevice) {
+                mCameraDevice.close();
+                mCameraDevice = null;
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException("Interrupted while trying to lock camera closing.", e);
+        } finally {
+            mCameraOpenCloseLock.release();
+            Log.d(LOG_TAG, "Closing camera. Released the lock");
         }
     }
 
