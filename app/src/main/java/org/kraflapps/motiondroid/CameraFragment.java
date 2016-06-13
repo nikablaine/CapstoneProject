@@ -118,10 +118,6 @@ public class CameraFragment extends Fragment {
         public void onSurfaceTextureSizeChanged(SurfaceTexture surfaceTexture, int width, int height) {
             configureTransform(width, height);
 
-/*            if (mCaptureSession == null) {
-                startPreview(surfaceTexture);
-            }*/
-
             /*Log.d(LOG_TAG, "SurfaceTextureSizeChanged: width = " + width + ", height = " + height);
             try {
                 if (mCurrentCameraId != null) {
@@ -222,6 +218,7 @@ public class CameraFragment extends Fragment {
         Log.d(LOG_TAG, "CameraFragment.onPause");
         closeCamera();
         super.onPause();
+
     }
 
     @Override
@@ -235,6 +232,7 @@ public class CameraFragment extends Fragment {
             mTextureView.setSurfaceTextureListener(mSurfaceTextureListener);
         }
     }
+
 
     private void setPreviewSize(CameraCharacteristics cameraCharacteristics, int width, int height, boolean isPortrait) {
         Log.d(LOG_TAG, "cameraCharacteristics = [" + cameraCharacteristics + "], width = [" + width + "], height = [" + height + "]");
@@ -362,7 +360,7 @@ public class CameraFragment extends Fragment {
                     if (!mCameraOpenCloseLock.tryAcquire(2500, TimeUnit.MILLISECONDS)) {
                         throw new RuntimeException("Time out waiting to lock camera opening.");
                     }
-                     mCameraManager.openCamera(mCurrentCameraId, callback, null);
+                    mCameraManager.openCamera(mCurrentCameraId, callback, null);
                 } catch (CameraAccessException e) {
                     Log.e(LOG_TAG, "Could not access camera", e);
                 } catch (InterruptedException e) {
