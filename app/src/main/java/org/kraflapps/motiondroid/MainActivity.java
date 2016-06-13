@@ -5,7 +5,6 @@ import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.support.annotation.IdRes;
 import android.support.annotation.NonNull;
@@ -25,23 +24,36 @@ public class MainActivity extends AppCompatActivity {
     private View.OnClickListener onClickStartListener = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
-            Snackbar.make(view, "Starting the motion service ..", Snackbar.LENGTH_SHORT)
-                    .setAction("Action", null).show();
 
-            CameraFragment fragment = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
-            fragment.closeCamera();
+            if (checkDirName() == null) {
+                Snackbar.make(view, "Please set the directory to save files in preferences", Snackbar.LENGTH_SHORT)
+                        .setAction("Action", null).show();
+            } else {
+                Snackbar.make(view, "Starting the motion service ..", Snackbar.LENGTH_SHORT)
+                        .setAction("Action", null).show();
+                Intent serviceIntent = new Intent(getApplicationContext(), MotionService.class);
+                startService(serviceIntent);
+                setViews();
+            }
 
-            Intent serviceIntent = new Intent(getApplicationContext(), MotionService.class);
+/*            CameraFragment fragment = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
+            fragment.closeCamera();*/
+
+
             /*AlarmManager alarmManager = (AlarmManager) getApplicationContext().getSystemService(Context.ALARM_SERVICE);
             PendingIntent alarmIntent = PendingIntent.getBroadcast(getApplicationContext(), 0, serviceIntent, 0);
 
             alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, System.currentTimeMillis(),
                     10000, alarmIntent);*/
 
-            startService(serviceIntent);
-            setViews();
         }
     };
+
+    private String checkDirName() {
+        // add the default value for the storage folder
+        SharedPreferences defaultSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        return defaultSharedPreferences.getString(getString(R.string.pref_folder_key), null);
+    }
 
     private View.OnClickListener onClickEndListener = new View.OnClickListener() {
         @Override
@@ -73,20 +85,6 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         setViews();
-    }
-
-    @Override
-    protected void onPostCreate(@Nullable Bundle savedInstanceState) {
-        super.onPostCreate(savedInstanceState);
-
-        // add the default value for the storage folder
-        SharedPreferences defaultSharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        String dirName = defaultSharedPreferences.getString(getString(R.string.pref_folder_key), null);
-        if (null == dirName) {
-            SharedPreferences.Editor editor = defaultSharedPreferences.edit();
-            editor.putString(getString(R.string.pref_folder_key), Environment.getExternalStorageDirectory() + getString(R.string.default_folder_name));
-            editor.apply();
-        }
     }
 
     @Override
