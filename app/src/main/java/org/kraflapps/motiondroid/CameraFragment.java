@@ -33,6 +33,8 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.firebase.crash.FirebaseCrash;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -89,6 +91,7 @@ public class CameraFragment extends Fragment {
         public void onError(CameraDevice camera, int error) {
             mCameraOpenCloseLock.release();
             Log.e(LOG_TAG, "Camera error: " + error);
+            FirebaseCrash.log("Camera error: " + error);
         }
     };
 
@@ -372,6 +375,7 @@ public class CameraFragment extends Fragment {
                 mCameraDevice = null;
             }
         } catch (InterruptedException e) {
+            FirebaseCrash.report(e);
             throw new RuntimeException("Interrupted while trying to lock camera closing.", e);
         } finally {
             mCameraOpenCloseLock.release();
@@ -450,6 +454,7 @@ public class CameraFragment extends Fragment {
                             @Override
                             public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
                                 Log.e(LOG_TAG, "Failed");
+                                FirebaseCrash.log("Camera capture session configuration failed");
                             }
 
                             @Override
