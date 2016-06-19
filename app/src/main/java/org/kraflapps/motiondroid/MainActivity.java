@@ -17,11 +17,13 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
-import com.firebase.client.Firebase;
+import com.google.android.gms.analytics.HitBuilders;
+import com.google.android.gms.analytics.Tracker;
 
 public class MainActivity extends AppCompatActivity {
 
     private boolean mRunning;
+    private Tracker mTracker;
 
     private View.OnClickListener onClickStartListener = new View.OnClickListener() {
         @Override
@@ -36,6 +38,11 @@ public class MainActivity extends AppCompatActivity {
                 Intent serviceIntent = new Intent(getApplicationContext(), MotionService.class);
                 startService(serviceIntent);
                 setViews();
+
+                mTracker.send(new HitBuilders.EventBuilder()
+                        .setCategory("Action")
+                        .setAction("Start")
+                        .build());
             }
 
 /*            CameraFragment fragment = (CameraFragment) getSupportFragmentManager().findFragmentById(R.id.fragment);
@@ -66,6 +73,11 @@ public class MainActivity extends AppCompatActivity {
             Intent serviceIntent = new Intent(getApplicationContext(), MotionService.class);
             stopService(serviceIntent);
             setViews();
+
+            mTracker.send(new HitBuilders.EventBuilder()
+                    .setCategory("Action")
+                    .setAction("Stop")
+                    .build());
         }
     };
 
@@ -73,7 +85,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        Firebase.setAndroidContext(this);
+        // Firebase.setAndroidContext(this);
+
+        // Obtain the shared Tracker instance.
+        AnalyticsApplication application = (AnalyticsApplication) getApplication();
+        mTracker = application.getDefaultTracker();
 
         setContentView(R.layout.activity_main);
 
